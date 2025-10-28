@@ -7,12 +7,154 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f2027">
 <style>
-/* (Paste **exact** CSS and JS from the latest version you liked here) */
+body {
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #f0f0f0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+}
+.container {
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    padding: 30px;
+    margin: 40px 0;
+    width: 360px;
+    backdrop-filter: blur(12px);
+}
+h1 {
+    text-align: center;
+    font-size: 1.3rem;
+    margin-top: 0;
+    margin-bottom: 25px;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+}
+label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+input {
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 15px;
+    border: none;
+    border-radius: 5px;
+    font-size: 0.95rem;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    outline: none;
+}
+input::placeholder { color: rgba(255,255,255,0.5); }
+.results {
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+}
+.results h3 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    padding-bottom: 5px;
+}
+.result-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-family: "Courier New", monospace;
+}
+.highlight { color: #6fffd5; }
+.warning { color: #ff8080; }
 </style>
 </head>
 <body>
-<!-- (Paste your calculator HTML here) -->
-<script src="main.js"></script>
+<div class="container">
+  <h1>Cartel's Trade Signal TP/SL Calculator</h1>
+
+  <label for="entry">Current Price</label>
+  <input type="number" id="entry" placeholder="e.g. 0.0003527" step="0.00000001">
+
+  <label for="stoploss">Stop Loss Price</label>
+  <input type="number" id="stoploss" placeholder="e.g. 0.0003190" step="0.00000001">
+
+  <label for="dca">Second Buy (DCA)</label>
+  <input type="number" id="dca" placeholder="e.g. 0.0003329" step="0.00000001">
+
+  <label for="custom">Custom % Increase</label>
+  <input type="number" id="custom" placeholder="e.g. 1" step="0.01">
+
+  <div class="results" id="results"></div>
+</div>
+
+<script>
+(function(){
+  const entry = document.getElementById('entry');
+  const stoploss = document.getElementById('stoploss');
+  const dca = document.getElementById('dca');
+  const custom = document.getElementById('custom');
+  const resultsDiv = document.getElementById('results');
+
+  const fixedTargets = [4, 8, 12, 20, 30];
+
+  function format(num) {
+    if (!isFinite(num)) return '-';
+    return parseFloat(num).toFixed(8);
+  }
+
+  function buildTargets(base, title) {
+    let html = `<h3>${title}</h3>`;
+    fixedTargets.forEach(p => {
+      const target = base * (1 + p/100);
+      html += `<div class="result-line"><span>${p}%</span><span class="highlight">${format(target)}</span></div>`;
+    });
+    return html;
+  }
+
+  function calc() {
+    const e = parseFloat(entry.value);
+    const sl = parseFloat(stoploss.value);
+    const d = parseFloat(dca.value);
+    const customPerc = parseFloat(custom.value);
+
+    resultsDiv.innerHTML = '';
+
+    if (isNaN(e) || e <= 0) {
+      resultsDiv.innerHTML = '<em>Enter a valid current price to begin.</em>';
+      return;
+    }
+
+    let html = buildTargets(e, "Predefined Targets");
+    if (!isNaN(customPerc)) {
+      const customVal = e * (1 + customPerc/100);
+      html += `<div class="result-line"><span>Custom +${customPerc}%</span><span class="highlight">${format(customVal)}</span></div>`;
+    }
+
+    if (!isNaN(sl) && sl > 0) {
+      const lossPerc = ((e - sl) / e) * 100;
+      html += `<h3>Stop Loss</h3>
+        <div class="result-line"><span>SL Value</span><span class="warning">${format(sl)}</span></div>
+        <div class="result-line"><span>Decrease %</span><span class="warning">-${lossPerc.toFixed(2)}%</span></div>`;
+    }
+
+    if (!isNaN(d) && d > 0) {
+      const avg = (e + d) / 2;
+      html += `<h3>DCA Result</h3>
+        <div class="result-line"><span>Average Entry</span><span class="highlight">${format(avg)}</span></div>
+        ${buildTargets(avg, "Average Entry Targets")}`;
+    }
+
+    resultsDiv.innerHTML = html;
+  }
+  [entry, stoploss, dca, custom].forEach(inp => inp.addEventListener('input', calc));
+})();
+</script>
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('service-worker.js');
